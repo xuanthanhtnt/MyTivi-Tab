@@ -105,6 +105,7 @@ fun Guide(
     onRefresh: () -> Unit,
     emptyText: String,
     groupLabel: String,
+    onOpenGroups: () -> Unit,
     onTapChannel: (Int, Channel) -> Unit,
     onTapCell: (Int, Channel, Cell) -> Unit,
     onFavorite: (Channel) -> Unit,
@@ -112,7 +113,14 @@ fun Guide(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
-        TimelineHeader(now = now, windowStart = windowStart, scroll = ui.scroll, dims = dims, groupLabel = groupLabel)
+        TimelineHeader(
+            now = now,
+            windowStart = windowStart,
+            scroll = ui.scroll,
+            dims = dims,
+            groupLabel = groupLabel,
+            onOpenGroups = onOpenGroups,
+        )
         Box(Modifier.fillMaxWidth().height(1.dp).background(Line))
         GuideBody(
             shown = shown,
@@ -232,7 +240,14 @@ private fun NowChip(visible: Boolean, onClick: () -> Unit, modifier: Modifier = 
 }
 
 @Composable
-private fun TimelineHeader(now: Long, windowStart: Long, scroll: ScrollState, dims: GuideDims, groupLabel: String) {
+private fun TimelineHeader(
+    now: Long,
+    windowStart: Long,
+    scroll: ScrollState,
+    dims: GuideDims,
+    groupLabel: String,
+    onOpenGroups: () -> Unit,
+) {
     val density = LocalDensity.current
     val dateText = remember(now / 60_000) {
         SimpleDateFormat("EEE dd/MM  HH:mm", Locale.getDefault()).format(Date(now))
@@ -241,22 +256,40 @@ private fun TimelineHeader(now: Long, windowStart: Long, scroll: ScrollState, di
     val nowPx = with(density) { (((now - windowStart) / 60_000f) * dims.dpPerMin).dp.toPx() }
     val halfArrowPx = with(density) { (arrowW / 2).toPx() }
 
-    Row(Modifier.fillMaxWidth().height(36.dp), verticalAlignment = Alignment.CenterVertically) {
-        // Nhóm đang xem (ngăn nhóm kênh tự ẩn nên hiện tên nhóm ở đây) + ngày giờ
+    Row(Modifier.fillMaxWidth().height(46.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Nút ◄ + tên nhóm đang xem: chạm để mở ngăn nhóm kênh (ngăn luôn tự ẩn). Kèm ngày giờ.
         Row(
-            Modifier.width(dims.leftW).padding(start = 16.dp, end = 8.dp),
+            Modifier.width(dims.leftW).fillMaxHeight().padding(start = 8.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Row(
+                Modifier
+                    .weight(1f, fill = false)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(19.dp))
+                    .background(SelBg)
+                    .clickable(onClick = onOpenGroups)
+                    .padding(start = 6.dp, end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AppIcon(R.drawable.ic_arrow_left, "Mở nhóm kênh", Modifier.size(24.dp), tint = Accent)
+                Text(
+                    groupLabel,
+                    color = Accent,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            // Cột hẹp (điện thoại / chia đôi màn hình): chỉ hiện giờ để chừa chỗ cho tên nhóm
             Text(
-                groupLabel,
-                color = Accent,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
+                "  " + if (dims.leftW < 200.dp) hhmm(now) else dateText,
+                color = Dim,
+                fontSize = 13.sp,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
+                softWrap = false,
             )
-            Text("  ·  $dateText", color = Dim, fontSize = 14.sp, maxLines = 1, softWrap = false)
         }
         Box(Modifier.weight(1f).fillMaxHeight().clipToBounds()) {
             // Kéo thanh giờ cũng trượt cả bảng (dùng chung ScrollState)

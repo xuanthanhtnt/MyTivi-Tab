@@ -2,6 +2,7 @@
 
 package com.mytivi.app
 
+import android.os.SystemClock
 import android.view.LayoutInflater
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -10,9 +11,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,7 +63,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -73,7 +70,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -81,7 +77,6 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -97,12 +92,14 @@ import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 /**
  * Trạng thái màn hình chính, giữ ở cấp App để vào/ra toàn màn hình (hoặc xoay máy)
  * không bị mất nhóm đang chọn, chữ đang tìm và vị trí cuộn bảng lịch.
  */
+/** Ngăn nhóm kênh tự ẩn sau bấy nhiêu ms không được chạm tới. */
+private const val DRAWER_AUTO_HIDE_MS = 10_000L
+
 @Stable
 class BrowseUiState {
     var sel by mutableIntStateOf(1)            // 0 = Yêu thích, 1 = Tất cả, 2.. = nhóm
@@ -230,20 +227,31 @@ fun BrowseScreen(
 
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val activity = LocalContext.current.findActivity()
-    // Nút / cử chỉ "Quay lại" ở màn hình chính:
-    //  - đang mở ngăn nhóm → đóng; đang tìm kiếm → đóng ô tìm;
-    //  - còn lại → MỞ ngăn nhóm kênh. Trên máy điều hướng bằng cử chỉ, vuốt từ mép trái chính là cử chỉ
-    //    "Quay lại" của Android, nên vuốt ở bất kỳ đâu dọc mép trái đều mở nhóm kênh thay vì thoát app.
-    //  Thoát app: nút "Thoát" ở cuối ngăn nhóm, hoặc Home.
-    BackHandler {
-        when {
-            drawer.isOpen -> scope.launch { drawer.close() }
-            ui.searchOpen -> {
-                ui.searchOpen = false
-                setQuery("")
-            }
-            else -> scope.launch { drawer.open() }
+    BackHandler(enabled = drawer.isOpen || ui.searchOpen) {
+        if (drawer.isOpen) {
+            scope.launch { drawer.close() }
+        } else {
+            ui.searchOpen = false
+            setQuery("")
         }
+    }
+    // Ngăn nhóm tự ẩn sau 10 giây không chạm vào (đếm lại mỗi lần chạm/cuộn/gõ tìm trong ngăn)
+    val lastTouch = remember { longArrayOf(0L) }
+    LaunchedEffect(drawer.isOpen) {
+        if (!drawer.isOpen) return@LaunchedEffect
+        lastTouch[0] = SystemClock.uptimeMillis()
+        while (true) {
+            delay(1_000)
+            if (SystemClock.uptimeMillis() - lastTouch[0] > DRAWER_AUTO_HIDE_MS) {
+                drawer.close()
+                break
+            }
+        }
+    }
+    val openGroups: () -> Unit = { scope.launch { drawer.open() } }
+    val onQueryInPane: (String) -> Unit = { q ->
+        lastTouch[0] = SystemClock.uptimeMillis()
+        setQuery(q)
     }
 
     val updated = if (vm.lastUpdated > 0) " · cập nhật ${hhmm(vm.lastUpdated)}" else ""
@@ -309,6 +317,7 @@ fun BrowseScreen(
             onRefresh = { vm.refresh() },
             emptyText = emptyText,
             groupLabel = groupLabel,
+            onOpenGroups = openGroups,
             onTapChannel = { i, ch -> tapChannel(i, ch) },
             onTapCell = { i, ch, cell -> tapCell(i, ch, cell) },
             onFavorite = { vm.toggleFavorite(it) },
@@ -330,7 +339,7 @@ fun BrowseScreen(
             },
             showSearch = withSearch,
             query = query,
-            onQuery = { setQuery(it) },
+            onQuery = onQueryInPane,
             searchHint = searchHint,
             status = status,
             loading = vm.loading,
@@ -343,14 +352,23 @@ fun BrowseScreen(
             onUpdate = { updates.onButton() },
             onAbout = onAbout,
             onExit = { activity?.finish() },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent(PointerEventPass.Initial)
+                            lastTouch[0] = SystemClock.uptimeMillis()
+                        }
+                    }
+                },
         )
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Bg)) {
         val wide = maxWidth >= 840.dp && maxHeight >= 480.dp
         val landscape = maxWidth > maxHeight
-        // Ngăn nhóm kênh luôn ẩn; vuốt từ mép trái (hoặc chạm tay nắm ‹ ở giữa mép trái, nút ☰) để hiện
+        // Ngăn nhóm kênh luôn ẩn; chạm nút ◄ (cạnh tên nhóm, đầu bảng lịch) hoặc nút ☰ để hiện
         ModalNavigationDrawer(
             drawerState = drawer,
             gesturesEnabled = drawer.isOpen,      // đang mở: vuốt sang trái hoặc chạm ra ngoài để ẩn
@@ -361,12 +379,7 @@ fun BrowseScreen(
                 }
             },
         ) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Bg)
-                    .leftEdgeSwipe(onSwipe = { scope.launch { drawer.open() } }),
-            ) {
+            Box(Modifier.fillMaxSize().background(Bg)) {
                 Column(Modifier.fillMaxSize().safeDrawingPadding()) {
                     if (!wide) {
                         TopBar(
@@ -381,7 +394,7 @@ fun BrowseScreen(
                             },
                             loading = vm.loading,
                             updateAvailable = updates.updateAvailable,
-                            onMenu = { scope.launch { drawer.open() } },
+                            onMenu = openGroups,
                             onRefresh = { vm.refresh() },
                             onSettings = onSettings,
                             onUpdate = { updates.onButton() },
@@ -397,78 +410,8 @@ fun BrowseScreen(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     )
                 }
-                EdgeHandle(
-                    onClick = { scope.launch { drawer.open() } },
-                    modifier = Modifier.align(Alignment.CenterStart),
-                )
             }
         }
-    }
-}
-
-/**
- * Vuốt từ mép trái sang phải (bắt đầu trong ~28dp sát mép) → onSwipe.
- * Nghe ở lượt Initial (trước các phần tử con) nhưng chỉ "giữ" cử chỉ khi đã chắc là vuốt ngang sang phải,
- * nên chạm / giữ lâu / cuộn danh sách kênh ở sát mép vẫn hoạt động bình thường.
- * Đoạn 200dp giữa mép trái được loại khỏi cử chỉ "Quay lại" của Android (giới hạn tối đa Android cho phép);
- * vuốt ở chỗ khác dọc mép trái thì Android báo "Quay lại" và BackHandler ở trên cũng mở ngăn nhóm.
- */
-@Composable
-private fun Modifier.leftEdgeSwipe(onSwipe: () -> Unit): Modifier {
-    val swipe by rememberUpdatedState(onSwipe)
-    val density = LocalDensity.current
-    val edgePx = with(density) { 28.dp.toPx() }
-    val exclusionH = with(density) { 200.dp.toPx() }
-    val exclusionW = with(density) { 32.dp.toPx() }
-    return this
-        .systemGestureExclusion { c ->
-            val h = c.size.height.toFloat()
-            val top = ((h - exclusionH) / 2f).coerceAtLeast(0f)
-            Rect(0f, top, exclusionW, (top + exclusionH).coerceAtMost(h))
-        }
-        .pointerInput(Unit) {
-            awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                if (down.position.x > edgePx) return@awaitEachGesture
-                val slop = viewConfiguration.touchSlop
-                var dx = 0f
-                var dy = 0f
-                while (true) {
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                    val c = event.changes.firstOrNull { it.id == down.id } ?: break
-                    if (!c.pressed) break
-                    val d = c.position - c.previousPosition
-                    dx += d.x
-                    dy += d.y
-                    if (dx > slop && dx > abs(dy) * 1.5f) {
-                        event.changes.forEach { it.consume() }
-                        swipe()
-                        // Giữ nốt phần còn lại của cử chỉ để bảng kênh bên dưới không bị kéo theo
-                        do {
-                            val rest = awaitPointerEvent(PointerEventPass.Initial)
-                            rest.changes.forEach { it.consume() }
-                        } while (rest.changes.any { it.pressed })
-                        break
-                    }
-                    if (abs(dy) > slop) break       // vuốt dọc: để danh sách kênh cuộn
-                }
-            }
-        }
-}
-
-/** Tay nắm nhỏ ở giữa mép trái: gợi ý "vuốt từ đây để mở nhóm kênh"; chạm vào cũng mở. */
-@Composable
-private fun EdgeHandle(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier
-            .width(18.dp)
-            .height(80.dp)
-            .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
-            .background(Color(0x33FFFFFF))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        AppIcon(R.drawable.ic_chevron_right, "Mở nhóm kênh", Modifier.size(18.dp), tint = Color.White)
     }
 }
 
@@ -791,7 +734,7 @@ private fun InfoFull(
             Spacer(Modifier.height(8.dp))
             Text(
                 "Chạm lần nữa vào kênh đang xem (hoặc vào khung hình) để xem toàn màn hình. " +
-                    "Vuốt từ mép trái màn hình để mở nhóm kênh. Kéo ngang bảng lịch để xem chương trình sắp tới; " +
+                    "Chạm ◄ cạnh tên nhóm (đầu bảng lịch) để chọn nhóm kênh. Kéo ngang bảng lịch để xem chương trình sắp tới; " +
                     "giữ lâu tên kênh để thêm vào Yêu thích.",
                 color = Dim,
                 fontSize = 14.sp,
@@ -1016,7 +959,7 @@ private fun GroupPane(
             Spacer(Modifier.width(10.dp))
             Column {
                 Text("MyTivi", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("Chọn nhóm, hoặc vuốt sang trái để ẩn", color = Dim, fontSize = 12.sp)
+                Text("Chạm ra ngoài để ẩn · tự ẩn sau 10 giây", color = Dim, fontSize = 12.sp)
             }
         }
         if (showSearch) {

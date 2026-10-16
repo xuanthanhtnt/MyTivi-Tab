@@ -9,7 +9,7 @@ Phần lõi (đọc playlist M3U, EPG XMLTV, cache, tự làm mới, tự cập 
 |---|---|---|
 | Điều khiển | Remote (▲▼◄► OK) | Chạm, vuốt, chụm; vẫn dùng được bàn phím (bao da bàn phím, DeX) |
 | Màn hình chính | Một bố cục 16:9 | Tự đổi bố cục theo chiều xoay và kích thước (xem dưới) |
-| Nhóm kênh | Ngăn ẩn, bấm ◄ để mở | Ngăn tự ẩn, **vuốt từ mép trái** để hiện (hoặc tay nắm ‹, nút ☰); dựng dọc có thêm hàng chip nhóm |
+| Nhóm kênh | Ngăn ẩn, bấm ◄ để mở | Ngăn luôn tự ẩn, chạm nút **◄ <tên nhóm>** ở đầu bảng lịch (hoặc ☰) để hiện; dựng dọc có thêm hàng chip nhóm |
 | Xem trước → toàn màn hình | Tải lại luồng | **Dùng chung 1 trình phát: phóng to ngay, không tải lại** |
 | Toàn màn hình | ▲▼ đổi kênh, OK danh sách | Vuốt trái mở danh sách kênh, vuốt dọc độ sáng/âm lượng, chụm để zoom, nút ⏮ ⏯ ⏭ |
 | Cửa sổ nổi (PiP) | – | Có (Android 8+), kèm nút kênh trước / phát-dừng / kênh sau |
@@ -22,8 +22,8 @@ Phần lõi (đọc playlist M3U, EPG XMLTV, cache, tự làm mới, tự cập 
 ## Bố cục tự đổi theo màn hình
 - **Nằm ngang, màn hình rộng (≥ 840dp)** – Galaxy Tab S7…S10 / S FE, Tab A9+ 11", Xiaomi/Redmi Pad, Lenovo Tab P11/P12…:
   khung xem trước + thông tin chương trình ở trên · thanh thời gian (kèm tên nhóm đang xem) · bảng kênh/chương trình như bản TV.
-  Ngăn nhóm kênh **tự ẩn**: vuốt từ mép trái sang (hoặc chạm tay nắm ‹ giữa mép trái) để hiện; trong ngăn có ô tìm kiếm,
-  danh sách nhóm, Làm mới, Cài đặt, Cập nhật, Giới thiệu, Thoát. Chọn nhóm xong ngăn tự ẩn.
+  Ngăn nhóm kênh **luôn tự ẩn**: chạm nút **◄ <tên nhóm>** ở đầu bảng lịch để hiện; trong ngăn có ô tìm kiếm,
+  danh sách nhóm, Làm mới, Cài đặt, Cập nhật, Giới thiệu, Thoát. Chọn nhóm, chạm ra ngoài, hoặc để yên 10 giây là ngăn tự ẩn.
 - **Dựng dọc, tablet nhỏ, chia đôi màn hình, cửa sổ pop-up** – Tab A9 8.7", Tab S nằm dọc…:
   thanh trên cùng (☰ nhóm kênh, 🔍 tìm, ⟳ làm mới, ⚙ cài đặt) · khung xem trước rộng hết chiều ngang · dải thông tin gọn
   với nút ★ và ⛶ · hàng chip nhóm kênh cuộn ngang · bảng lịch bên dưới.
@@ -31,9 +31,8 @@ Phần lõi (đọc playlist M3U, EPG XMLTV, cache, tự làm mới, tự cập 
 
 ## Thao tác
 **Màn hình chính**
-- Vuốt từ mép trái sang phải: hiện ngăn nhóm kênh · chọn nhóm / vuốt sang trái / chạm ra ngoài: ẩn.
-  Nút / cử chỉ *Quay lại* ở màn hình chính cũng mở ngăn nhóm (trên máy điều hướng bằng cử chỉ, vuốt từ mép trái chính là
-  "Quay lại"); thoát app bằng nút **Thoát ứng dụng** cuối ngăn nhóm hoặc Home.
+- Chạm **◄ <tên nhóm>** ở đầu bảng lịch: hiện ngăn nhóm kênh · chọn nhóm / chạm ra ngoài / vuốt sang trái / Quay lại /
+  để yên 10 giây: ẩn. (Không dùng vuốt từ mép trái vì đó là cử chỉ "Quay lại" của Android.)
 - Chạm tên kênh: xem trước (có tiếng). Chạm tên kênh **lần nữa**, hoặc nút *Toàn màn hình*: xem toàn màn hình.
 - Khung xem trước: chạm 1 lần hiện nút ⏯ phát/tạm dừng và 🔇 tắt/bật tiếng (app nhớ lựa chọn tắt tiếng);
   **chạm đúp** hoặc nút ⛶ ở góc phải để xem toàn màn hình.
