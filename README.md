@@ -22,8 +22,10 @@ Phần lõi (đọc playlist M3U, EPG XMLTV, cache, tự làm mới, tự cập 
 ## Bố cục tự đổi theo màn hình
 - **Nằm ngang, màn hình rộng (≥ 840dp)** – Galaxy Tab S7…S10 / S FE, Tab A9+ 11", Xiaomi/Redmi Pad, Lenovo Tab P11/P12…:
   khung xem trước + thông tin chương trình ở trên · thanh thời gian (kèm tên nhóm đang xem) · bảng kênh/chương trình như bản TV.
-  Ngăn nhóm kênh **luôn tự ẩn**: chạm nút **◄ <tên nhóm>** ở đầu bảng lịch để hiện; trong ngăn có ô tìm kiếm,
-  danh sách nhóm, Làm mới, Cài đặt, Cập nhật, Giới thiệu, Thoát. Chọn nhóm, chạm ra ngoài, hoặc để yên 10 giây là ngăn tự ẩn.
+  Ngăn nhóm kênh **luôn tự ẩn**: chạm nút **◄ <tên nhóm>** ở đầu bảng lịch để hiện. Ngăn có 2 cấp:
+  cấp 1 là ô tìm kiếm + danh sách nhóm (chiếm gần hết chiều cao); nút **⚙** ở đầu ngăn mở cấp 2 **Tùy chọn**
+  (Làm mới, Cài đặt, Kiểm tra cập nhật, Giới thiệu, số kênh, phiên bản). Chọn nhóm, chạm ra ngoài, vuốt ngăn sang trái,
+  bấm Quay lại hoặc để yên 10 giây là ngăn tự ẩn.
 - **Dựng dọc, tablet nhỏ, chia đôi màn hình, cửa sổ pop-up** – Tab A9 8.7", Tab S nằm dọc…:
   thanh trên cùng (☰ nhóm kênh, 🔍 tìm, ⟳ làm mới, ⚙ cài đặt) · khung xem trước rộng hết chiều ngang · dải thông tin gọn
   với nút ★ và ⛶ · hàng chip nhóm kênh cuộn ngang · bảng lịch bên dưới.
@@ -54,7 +56,7 @@ Phần lõi (đọc playlist M3U, EPG XMLTV, cache, tự làm mới, tự cập 
   (SD/HD/FHD/4K, độ phân giải, fps, codec, âm thanh, bitrate) – giống bản TV.
 
 ## Giới thiệu & thông tin nhà phát triển
-Mở từ ngăn nhóm kênh (☰) > **Giới thiệu**, hoặc Cài đặt > **Giới thiệu**. Gồm: phiên bản, số bản dựng, ngày dựng + mã commit,
+Mở từ ngăn nhóm kênh > ⚙ Tùy chọn > **Giới thiệu**, hoặc Cài đặt > **Giới thiệu**. Gồm: phiên bản, số bản dựng, ngày dựng + mã commit,
 nhà phát triển, email liên hệ (mở ứng dụng thư với tiêu đề có sẵn số phiên bản), trang mã nguồn, trang báo lỗi,
 thông tin thiết bị (nút *Sao chép* để dán vào email báo lỗi), thư viện mã nguồn mở + giấy phép, điều khoản & quyền riêng tư.
 Muốn đổi tên/email/năm bản quyền: sửa object `AppInfo` ở đầu `AboutScreen.kt`.
@@ -93,7 +95,8 @@ Build bằng Android Studio (Koala 2024.1+): mở thư mục, đợi Gradle sync
   mới cài được APK ngoài Galaxy Store / Play Store.
 - Google Play Protect có thể cảnh báo ứng dụng lạ: chọn *Chi tiết > Vẫn cài đặt*.
 - Hoặc qua máy tính: `adb install MyTivi-Tab.apk`.
-- Từ lần sau: ngăn nhóm kênh (hoặc ⚙) > **Kiểm tra cập nhật** > *Cập nhật ngay*. App tự kiểm tra ngầm mỗi lần mở.
+- Từ lần sau: ◄ ngăn nhóm kênh > ⚙ Tùy chọn > **Kiểm tra cập nhật** > *Cập nhật ngay* (nút ⚙ có chấm xanh khi có bản mới).
+  App tự kiểm tra ngầm mỗi lần mở.
 
 ## Cấu trúc mã
 | File | Việc | So với bản TV |
