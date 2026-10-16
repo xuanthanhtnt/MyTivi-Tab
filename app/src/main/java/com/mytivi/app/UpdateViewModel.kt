@@ -114,7 +114,7 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
             ctx.startActivity(intent)
         } catch (e: ActivityNotFoundException) {
             state = UpdateState.Failed(
-                "Box không mở được màn hình cấp quyền. Vào Cài đặt > Bảo mật (hoặc Ứng dụng) > " +
+                "Máy không mở được màn hình cấp quyền. Vào Cài đặt > Ứng dụng > Quyền truy cập đặc biệt > " +
                     "Cài ứng dụng không rõ nguồn gốc, bật cho MyTivi rồi thử lại.",
             )
         }

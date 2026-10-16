@@ -43,23 +43,36 @@ jobs:
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          gradle assembleRelease --no-daemon
-          cp app/build/outputs/apk/release/app-release.apk MyTivi.apk
+          set -o pipefail
+          gradle assembleRelease --no-daemon 2>&1 | tee build.log
+          cp app/build/outputs/apk/release/app-release.apk MyTivi-Tab.apk
+
+      # Build lỗi: gom các dòng lỗi (Kotlin "e: ...", tài nguyên, "What went wrong") thành một
+      # thông báo lỗi hiện ngay trên trang Actions, khỏi phải mở cả log dài để tìm.
+      - name: Report build errors
+        if: failure()
+        run: |
+          [ -f build.log ] || exit 0
+          grep -E "^e: |^ERROR|error: |What went wrong" -A1 build.log | grep -v '^--$' | head -80 > errors.txt || true
+          if [ -s errors.txt ]; then
+            msg=$(sed -e 's/%/%25/g' -e 's#file:///home/runner/work/[^/]*/[^/]*/##' errors.txt | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Lỗi build::${msg}"
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: MyTivi-apk
-          path: MyTivi.apk
+          name: MyTivi-Tab-apk
+          path: MyTivi-Tab.apk
 
-      # Tạo Release "v<số lượt build>" kèm MyTivi.apk; app đọc bản này để tự cập nhật
+      # Tạo Release "v<số lượt build>" kèm MyTivi-Tab.apk; app đọc bản này để tự cập nhật
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ github.run_number }}"
           NOTES="$(git log -1 --pretty=%B)"
-          gh release create "$TAG" MyTivi.apk \
-            --title "MyTivi 1.0.${{ github.run_number }}" \
+          gh release create "$TAG" MyTivi-Tab.apk \
+            --title "MyTivi Tab 1.0.${{ github.run_number }}" \
             --notes "$NOTES" \
             --latest \
-            || gh release upload "$TAG" MyTivi.apk --clobber
+            || gh release upload "$TAG" MyTivi-Tab.apk --clobber

@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">MyTivi</string>
+    <!-- Tên dưới biểu tượng app: khác bản TV ("MyTivi") để không nhầm khi cài cả hai -->
+    <string name="app_name">MyTivi Tab</string>
 </resources>

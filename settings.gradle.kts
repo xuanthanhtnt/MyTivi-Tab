@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "MyTivi"
+rootProject.name = "MyTivi-Tab"
 include(":app")

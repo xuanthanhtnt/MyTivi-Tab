@@ -1,5 +1,8 @@
 <resources>
     <style name="Theme.MyTivi" parent="@android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@android:color/black</item>
+        <!-- Cùng màu nền với app để mở app không bị nháy đen/trắng -->
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

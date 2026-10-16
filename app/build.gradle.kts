@@ -8,21 +8,30 @@ plugins {
 // Build trên máy (Android Studio) thì dùng 1.
 val ciRun = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
 // Repo chứa bản phát hành để app tự kiểm tra cập nhật (dạng chủ-repo/tên-repo)
-val updateRepo = System.getenv("GITHUB_REPOSITORY") ?: "xuanthanhtnt/MyTivi"
+val updateRepo = System.getenv("GITHUB_REPOSITORY") ?: "xuanthanhtnt/MyTivi-Tab"
 // Khóa ký cố định (lấy từ GitHub Secrets). Mọi bản phải ký cùng 1 khóa thì mới cài đè được.
 val keystoreFile = System.getenv("KEYSTORE_FILE")
+// Thông tin bản dựng hiện ở màn hình Giới thiệu
+val buildTime: String = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+    .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+val gitSha: String = (System.getenv("GITHUB_SHA") ?: "local").take(7)
 
 android {
+    // Giữ namespace như bản TV để dùng chung mã nguồn (lớp R, BuildConfig nằm ở com.mytivi.app)
     namespace = "com.mytivi.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.mytivi.app"
-        minSdk = 23            // Android 6.0+ (đa số Android TV box)
+        // Mã ứng dụng riêng cho bản máy tính bảng: cài song song được với bản TV,
+        // và trình tự cập nhật không bao giờ cài nhầm APK của bản TV.
+        applicationId = "com.mytivi.tab"
+        minSdk = 23            // Android 6.0+ (Galaxy Tab A đời cũ trở lên)
         targetSdk = 34
         versionCode = ciRun
         versionName = "1.0.$ciRun"
         buildConfigField("String", "UPDATE_REPO", "\"$updateRepo\"")
+        buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
+        buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
     }
 
     signingConfigs {

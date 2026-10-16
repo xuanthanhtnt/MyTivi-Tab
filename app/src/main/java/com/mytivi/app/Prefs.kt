@@ -39,4 +39,24 @@ class Prefs(context: Context) {
     var favorites: Set<String>
         get() = HashSet(sp.getStringSet("favorites", emptySet()) ?: emptySet())
         set(v) { sp.edit().putStringSet("favorites", HashSet(v)).apply() }
+
+    /** Bản tablet: mở app là vào thẳng toàn màn hình kênh xem gần nhất (mặc định tắt). */
+    var autoFullscreen: Boolean
+        get() = sp.getBoolean("auto_fullscreen", false)
+        set(v) { sp.edit().putBoolean("auto_fullscreen", v).apply() }
+
+    /** Kiểu hiển thị hình khi xem toàn màn hình: 0 = vừa khung, 1 = lấp đầy, 2 = kéo giãn. */
+    var videoFit: Int
+        get() = sp.getInt("video_fit", 0)
+        set(v) { sp.edit().putInt("video_fit", v).apply() }
+
+    /** Đã xem hướng dẫn cử chỉ ở màn hình toàn màn hình chưa (chỉ hiện lần đầu). */
+    var gestureTipsShown: Boolean
+        get() = sp.getBoolean("gesture_tips_shown", false)
+        set(v) { sp.edit().putBoolean("gesture_tips_shown", v).apply() }
+
+    /** Tắt tiếng ở khung xem trước (toàn màn hình luôn có tiếng). */
+    var previewMuted: Boolean
+        get() = sp.getBoolean("preview_muted", false)
+        set(v) { sp.edit().putBoolean("preview_muted", v).apply() }
 }

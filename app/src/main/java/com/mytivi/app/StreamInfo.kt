@@ -4,7 +4,8 @@ package com.mytivi.app
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -116,13 +117,14 @@ fun StreamInfo.badges(): List<String> {
 }
 
 /**
- * Theo dõi thông số luồng của một player. `key` đổi (đổi kênh) thì xóa thông số cũ
- * để không hiện nhầm thông số của kênh trước.
+ * Theo dõi thông số luồng của một player. `key` đổi (đổi kênh) thì đọc lại ngay:
+ * phóng to từ khung xem trước (cùng player, cùng kênh) thì có thông số liền;
+ * đổi kênh thì player vừa dừng nên thông số cũ bị xóa, không hiện nhầm của kênh trước.
  */
 @Composable
 fun rememberStreamInfo(exo: ExoPlayer, key: Any?): StreamInfo? {
     var info by remember { mutableStateOf<StreamInfo?>(null) }
-    LaunchedEffect(key) { info = null }
+    LaunchedEffect(key) { info = streamInfoOf(exo) }
     DisposableEffect(exo) {
         val listener = object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) {
@@ -135,10 +137,15 @@ fun rememberStreamInfo(exo: ExoPlayer, key: Any?): StreamInfo? {
     return info
 }
 
-/** Hàng nhãn thông số dạng viền mảnh. */
+/** Hàng nhãn thông số dạng viền mảnh (tự xuống dòng khi tablet để dọc, màn hình hẹp). */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StreamBadges(info: StreamInfo, modifier: Modifier = Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    FlowRow(
+        modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         info.badges().forEachIndexed { i, label ->
             val strong = i == 0 && info.height > 0     // nhãn chất lượng (FHD/HD/4K) nổi bật hơn
             Text(

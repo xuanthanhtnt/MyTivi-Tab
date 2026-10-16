@@ -49,6 +49,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var lastChannelUrl: String
         get() = prefs.lastChannelUrl
         set(value) { prefs.lastChannelUrl = value }
+    var autoFullscreen: Boolean
+        get() = prefs.autoFullscreen
+        set(value) { prefs.autoFullscreen = value }
+    var videoFit: Int
+        get() = prefs.videoFit
+        set(value) { prefs.videoFit = value }
+    var gestureTipsShown: Boolean
+        get() = prefs.gestureTipsShown
+        set(value) { prefs.gestureTipsShown = value }
+    var previewMuted: Boolean
+        get() = prefs.previewMuted
+        set(value) { prefs.previewMuted = value }
 
     init {
         viewModelScope.launch {

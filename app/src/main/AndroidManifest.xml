@@ -5,26 +5,47 @@
     <!-- Để tự cài bản cập nhật tải từ GitHub -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
-    <!-- Cho phép cài trên cả TV box (không có cảm ứng) -->
+    <!-- Không bắt buộc cảm ứng: Samsung khuyên vậy để dùng được chuột/bàn phím trên DeX -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.software.picture_in_picture" android:required="false" />
 
     <application
         android:allowBackup="true"
-        android:banner="@drawable/tv_banner"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:resizeableActivity="true"
         android:theme="@style/Theme.MyTivi"
         android:usesCleartextTraffic="true">
 
+        <!-- Samsung DeX: không khởi động lại app khi chuyển giữa màn hình tablet và DeX -->
+        <meta-data
+            android:name="com.samsung.android.multidisplay.keep_process_alive"
+            android:value="true" />
+
+        <!--
+          - singleTask + supportsPictureInPicture: thu nhỏ thành cửa sổ nổi khi xem toàn màn hình,
+            bấm lại biểu tượng app thì quay về đúng cửa sổ đó (không mở thêm bản thứ hai).
+          - configChanges: xoay màn hình, chia đôi màn hình, cửa sổ pop-up, DeX... không làm
+            tạo lại Activity, nên video không bị ngắt.
+        -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode"
-            android:exported="true">
+            android:configChanges="orientation|screenSize|smallestScreenSize|density|screenLayout|uiMode|keyboard|keyboardHidden|navigation"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="true"
+            android:windowSoftInputMode="adjustResize">
+            <!-- Kích thước mặc định khi mở ở cửa sổ tự do (pop-up view / DeX) -->
+            <layout
+                android:defaultWidth="960dp"
+                android:defaultHeight="600dp"
+                android:gravity="center"
+                android:minWidth="360dp"
+                android:minHeight="320dp" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
 

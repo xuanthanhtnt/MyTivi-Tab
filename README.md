@@ -1,96 +1,124 @@
-# MyTivi – trình phát IPTV cho Android TV box
+# MyTivi Tab – trình phát IPTV cho máy tính bảng Android
 
-App phát playlist M3U / luồng HLS (.m3u8) với giao diện điều khiển bằng remote, lấy cảm hứng từ TiviMate.
-Kotlin + Jetpack Compose + Media3 (ExoPlayer).
+Bản chuyển thể của **MyTivi (Android TV box)** sang điều khiển **cảm ứng**, dành cho Samsung Galaxy Tab
+và máy tính bảng Android của các hãng khác. Kotlin + Jetpack Compose + Media3 (ExoPlayer).
+Phần lõi (đọc playlist M3U, EPG XMLTV, cache, tự làm mới, tự cập nhật APK) giữ nguyên như bản TV.
 
-## Tính năng
-- Thêm playlist bằng link (.m3u danh sách kênh, hoặc 1 link .m3u8 đơn)
-- Nhóm kênh (group-title), logo kênh, tìm kiếm, kênh yêu thích
-- Xem toàn màn hình: ▲▼ / CH+ CH- đổi kênh, OK mở danh sách kênh, MENU thêm/bỏ yêu thích
-- EPG (XMLTV, hỗ trợ .gz): hiện chương trình đang phát + thanh tiến độ + chương trình tiếp theo
-- **Giao diện lịch phát sóng kiểu TiviMate**: khung xem trước + thông tin chương trình ở trên;
-  bên dưới là thanh thời gian và bảng kênh với các ô chương trình, có vạch "bây giờ"
-- Lướt tới kênh/ô nào thì khung xem trước (bo góc mềm, **có tiếng**) tự chạy kênh đó
-- **Nhóm kênh là ngăn kéo ẩn bên trái**: ở cột tên kênh bấm **◄** để mở, bấm **►** để đóng;
-  di chuyển trong ngăn thì danh sách kênh đổi theo nhóm; ô tìm kiếm ở trên, **Làm mới** và **Cài đặt** nằm ở dưới cùng của ngăn
-- Phần thông tin bên phải khung xem trước chỉ gồm: chương trình đang phát, giờ bắt đầu - kết thúc, thời gian còn lại
-- Thanh thời gian có mũi tên tam giác đánh dấu giờ hiện tại (thay cho vạch dọc)
-- ☆ cạnh tên kênh để thêm/bỏ yêu thích; bấm Home hoặc TV tắt màn hình thì tự dừng tiếng
-- **Tự cập nhật**: playlist tải lại sau mỗi 3 giờ, EPG sau mỗi 6 giờ (kể cả khi box mở nhiều ngày liền);
-  mở app là hiện ngay dữ liệu đã lưu rồi cập nhật ngầm; bấm *Làm mới* để cập nhật tay
-- **Cuộn vòng** danh sách kênh (bảng kênh và bảng chọn kênh toàn màn hình): ở kênh cuối bấm ▼ về kênh đầu, ở kênh đầu bấm ▲ xuống kênh cuối
-- Mở app là vào thẳng kênh xem gần nhất; tự thử lại khi mất luồng
-- Lưu cache playlist và EPG nên lần sau mở app có kênh và lịch ngay (ghi qua file tạm, không bao giờ ghi dở)
-- Bấm *Làm mới* liên tục không tạo nhiều lượt tải chồng nhau; kênh trùng hoàn toàn (cùng nhóm + cùng link) chỉ giữ 1
+## Khác gì so với bản TV
+| | Bản TV box | Bản tablet |
+|---|---|---|
+| Điều khiển | Remote (▲▼◄► OK) | Chạm, vuốt, chụm; vẫn dùng được bàn phím (bao da bàn phím, DeX) |
+| Màn hình chính | Một bố cục 16:9 | Tự đổi bố cục theo chiều xoay và kích thước (xem dưới) |
+| Nhóm kênh | Ngăn ẩn, bấm ◄ để mở | Nằm ngang: ngăn cố định bên trái · Dựng dọc: nút ☰ + hàng chip nhóm |
+| Xem trước → toàn màn hình | Tải lại luồng | **Dùng chung 1 trình phát: phóng to ngay, không tải lại** |
+| Toàn màn hình | ▲▼ đổi kênh, OK danh sách | Vuốt trái mở danh sách kênh, vuốt dọc độ sáng/âm lượng, chụm để zoom, nút ⏮ ⏯ ⏭ |
+| Cửa sổ nổi (PiP) | – | Có (Android 8+), kèm nút kênh trước / phát-dừng / kênh sau |
+| Mở app | Vào thẳng toàn màn hình | Mở màn hình lịch và phát luôn kênh gần nhất ở khung xem trước (có thể bật lại kiểu TV trong Cài đặt) |
+| Làm mới | Nút Làm mới | Nút Làm mới + **kéo xuống** ở đầu danh sách kênh |
+| Mã ứng dụng | `com.mytivi.app` | `com.mytivi.tab` (cài song song được, cập nhật riêng) |
+| Tên dưới biểu tượng | MyTivi | **MyTivi Tab** |
+| Giới thiệu | – | Màn hình Giới thiệu: phiên bản, nhà phát triển, liên hệ, thiết bị, thư viện, điều khoản |
 
-## Thanh thông tin khi xem kênh
-- Vào kênh hoặc đổi kênh: thanh thông tin hiện ở cạnh dưới khoảng 5 giây rồi mờ dần (bấm INFO trên remote để hiện lại).
-- Gồm: số kênh, logo, tên kênh, chương trình đang phát + tiến độ, chương trình tiếp theo, đồng hồ và
-  thông số luồng: chất lượng (SD/HD/FHD/4K), độ phân giải, fps, codec hình (H.264/H.265…), âm thanh (AAC 2.0, AC3 5.1…), bitrate.
+## Bố cục tự đổi theo màn hình
+- **Nằm ngang, màn hình rộng (≥ 840dp)** – Galaxy Tab S7…S10 / S FE, Tab A9+ 11", Xiaomi/Redmi Pad, Lenovo Tab P11/P12…:
+  ngăn nhóm kênh cố định bên trái (ô tìm kiếm ở trên; Làm mới, Cài đặt, Cập nhật ở dưới) · khung xem trước + thông tin
+  chương trình · thanh thời gian có mũi tên "bây giờ" · bảng kênh/chương trình như bản TV.
+- **Dựng dọc, tablet nhỏ, chia đôi màn hình, cửa sổ pop-up** – Tab A9 8.7", Tab S nằm dọc…:
+  thanh trên cùng (☰ nhóm kênh, 🔍 tìm, ⟳ làm mới, ⚙ cài đặt) · khung xem trước rộng hết chiều ngang · dải thông tin gọn
+  với nút ★ và ⛶ · hàng chip nhóm kênh cuộn ngang · bảng lịch bên dưới.
+- Xoay máy, kéo thanh chia đôi màn hình, chuyển sang DeX: **video không bị ngắt**, vẫn giữ nhóm/tìm kiếm/vị trí cuộn.
 
-## Cách build
-1. Cài **Android Studio** bản Koala (2024.1) trở lên, mở thư mục `MyTivi`.
-2. Đợi Gradle sync (cần Internet, Android SDK 34 – Studio sẽ tự đề nghị cài).
-   Nếu Studio báo thiếu Gradle wrapper, chọn dùng Gradle 8.7 trở lên.
-3. Chạy thử: tạo **Android TV emulator** (Device Manager > Create Device > TV), hoặc cắm TV box.
-4. Tạo APK: menu **Build > Build APK(s)** → file `app/build/outputs/apk/debug/app-debug.apk`.
+## Thao tác
+**Màn hình chính**
+- Chạm tên kênh: xem trước (có tiếng). Chạm tên kênh **lần nữa**, hoặc nút *Toàn màn hình*: xem toàn màn hình.
+- Khung xem trước: chạm 1 lần hiện nút ⏯ phát/tạm dừng và 🔇 tắt/bật tiếng (app nhớ lựa chọn tắt tiếng);
+  **chạm đúp** hoặc nút ⛶ ở góc phải để xem toàn màn hình.
+- Chạm ô chương trình sắp chiếu: hiện thông tin chương trình đó. Chạm ô đang phát của kênh đang xem: toàn màn hình.
+- Kéo ngang bảng lịch (hoặc thanh giờ): xem trước 12 giờ; nút **◀ Bây giờ** để quay về giờ hiện tại.
+- Kéo xuống ở đầu danh sách: làm mới playlist + EPG.
+- Chạm ☆ hoặc **giữ lâu** tên kênh: thêm/bỏ yêu thích.
 
-## Build APK không cần cài Android Studio (GitHub Actions)
-1. Tạo tài khoản GitHub (miễn phí) và tạo một repository mới.
-2. Giải nén `MyTivi.zip`, rồi tải **toàn bộ nội dung thư mục MyTivi** lên repo
-   (nhớ cả thư mục ẩn `.github`; trên web chọn *Add file > Upload files* và kéo thả cả thư mục).
-3. Vào tab **Actions > Build APK > Run workflow** (hoặc đợi nó tự chạy sau khi upload).
-4. Sau khoảng 5–8 phút, mở lượt chạy vừa xong, kéo xuống mục **Artifacts**, tải `MyTivi-apk`.
-   Giải nén sẽ có `app-debug.apk` – cài thẳng lên TV box.
+**Xem toàn màn hình**
+- Chạm: hiện/ẩn bảng điều khiển ⏮ ⏯ ⏭ (tự ẩn sau ~4 giây).
+- **Vuốt sang trái**: mở danh sách kênh (trượt ra từ bên phải) · vuốt sang phải hoặc chạm ra ngoài: đóng.
+  Vuốt bắt đầu sát mép phải cũng được (app chặn cử chỉ "Quay lại" của Android ở đoạn giữa mép phải).
+- Vuốt dọc ở nửa phải: **âm lượng** · nửa trái: độ sáng.
+- Mở 2 ngón: lấp đầy màn hình · chụm 2 ngón: vừa khung. Nút ⛶ đổi 3 kiểu (vừa khung / lấp đầy / kéo giãn), app nhớ lựa chọn.
+- Nút ☰: danh sách kênh · ⧉: cửa sổ nổi · ★: yêu thích · ⓘ: xem lại mẹo cử chỉ (tự hiện ở lần đầu mở toàn màn hình).
+- Bấm/vuốt **Home** khi đang xem: tự thu nhỏ thành cửa sổ nổi; trong cửa sổ có nút kênh trước / phát-dừng / kênh sau.
+- Bàn phím: ▲▼ hoặc PageUp/PageDown đổi kênh, Enter mở danh sách kênh, Space tạm dừng, Esc quay lại.
+- Thanh thông tin: số kênh, logo, chương trình đang phát + tiến độ, chương trình tiếp theo, đồng hồ, thông số luồng
+  (SD/HD/FHD/4K, độ phân giải, fps, codec, âm thanh, bitrate) – giống bản TV.
 
-## Cài lên TV box
-- Bật *Tùy chọn nhà phát triển > Gỡ lỗi ADB* trên box, rồi:
-  `adb connect <IP-của-box>:5555` và `adb install app-debug.apk`
-- Hoặc chép APK vào USB, mở bằng file manager trên box (cần cho phép cài từ nguồn không rõ).
+## Giới thiệu & thông tin nhà phát triển
+Mở từ ngăn nhóm kênh (☰) > **Giới thiệu**, hoặc Cài đặt > **Giới thiệu**. Gồm: phiên bản, số bản dựng, ngày dựng + mã commit,
+nhà phát triển, email liên hệ (mở ứng dụng thư với tiêu đề có sẵn số phiên bản), trang mã nguồn, trang báo lỗi,
+thông tin thiết bị (nút *Sao chép* để dán vào email báo lỗi), thư viện mã nguồn mở + giấy phép, điều khoản & quyền riêng tư.
+Muốn đổi tên/email/năm bản quyền: sửa object `AppInfo` ở đầu `AboutScreen.kt`.
+
+## Thiết bị hỗ trợ
+- **Android 6.0 trở lên** (cửa sổ nổi cần Android 8.0+).
+- **Samsung**: chia đôi màn hình, pop-up view, **DeX** (không khởi động lại app khi chuyển màn hình; dùng chuột/bàn phím),
+  S Pen dùng như ngón tay.
+- **Hãng khác**: Xiaomi/Redmi Pad, Lenovo Tab, Huawei MatePad, Oppo/Realme/OnePlus Pad, Teclast/Alldocube…, Amazon Fire (Fire OS 6+).
+  App **không cần Google Play Services**, cài APK là chạy.
+- Tablet chip giá rẻ: nếu bộ giải mã phần cứng lỗi, app tự chuyển sang bộ giải mã khác thay vì báo lỗi kênh.
+- Rút tai nghe / ngắt loa Bluetooth: tự tạm dừng. Có cuộc gọi: tự nhường tiếng.
+
+## Build APK (GitHub Actions – giống bản TV)
+> ⚠️ Repo `MyTivi-Tab` phải chứa **mã của thư mục MyTivi-Tab này**, không phải thư mục MyTivi (bản TV).
+> Kiểm tra nhanh: trong repo phải có `app/src/main/java/com/mytivi/app/Playback.kt` và `Guide.kt`,
+> và `app/build.gradle.kts` có dòng `applicationId = "com.mytivi.tab"`. Release đúng sẽ có file **`MyTivi-Tab.apk`**.
+
+1. Tạo repository mới, ví dụ `MyTivi-Tab` (để **Public** thì app mới đọc được bản phát hành để tự cập nhật).
+2. Tải **toàn bộ nội dung thư mục MyTivi-Tab** lên repo (nhớ cả thư mục ẩn `.github`).
+3. Thêm 2 secret ở *Settings > Secrets and variables > Actions*: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`.
+   Dùng lại **đúng khóa của bản TV** cũng được (mã ứng dụng khác nhau nên không đụng nhau), alias vẫn là `mytivi`.
+4. *Actions > Build APK > Run workflow* (hoặc tự chạy khi push lên `main`/`master`). Khoảng 5–8 phút sau có
+   Release `v<số lượt build>` kèm **`MyTivi-Tab.apk`**.
+5. Nếu build lỗi: mở lượt chạy trên tab Actions, phần **Annotations** có sẵn danh sách lỗi biên dịch (bước *Report build errors*).
+
+Build bằng Android Studio (Koala 2024.1+): mở thư mục, đợi Gradle sync, chạy trên **Tablet emulator**
+(Device Manager > Create Device > Tablet, ví dụ *Pixel Tablet* hoặc *Medium Tablet*) hoặc tablet thật.
+
+## Cài lên tablet
+- Nếu tablet đang có app **MyTivi** (bản TV) cài từ repo này hoặc repo TV: nên gỡ đi rồi cài **MyTivi Tab** mới
+  (hai app khác mã ứng dụng nên không cập nhật đè lên nhau được).
+- Mở trên tablet: `https://github.com/<tài-khoản>/MyTivi-Tab/releases/latest/download/MyTivi-Tab.apk`
+  (Samsung Internet / Chrome), tải về rồi chạm để cài; cho phép trình duyệt "cài ứng dụng không rõ nguồn gốc".
+- Samsung One UI 6 trở lên: nếu đang bật **Auto Blocker** (Cài đặt > Bảo mật và quyền riêng tư > Auto Blocker) thì phải tắt
+  mới cài được APK ngoài Galaxy Store / Play Store.
+- Google Play Protect có thể cảnh báo ứng dụng lạ: chọn *Chi tiết > Vẫn cài đặt*.
+- Hoặc qua máy tính: `adb install MyTivi-Tab.apk`.
+- Từ lần sau: ngăn nhóm kênh (hoặc ⚙) > **Kiểm tra cập nhật** > *Cập nhật ngay*. App tự kiểm tra ngầm mỗi lần mở.
 
 ## Cấu trúc mã
-| File | Việc |
-|---|---|
-| `M3uParser.kt` | Đọc #EXTINF (tvg-id, tvg-logo, group-title...) |
-| `EpgParser.kt` | Đọc XMLTV, chỉ giữ -2h..+24h |
-| `Http.kt` | Tải playlist/EPG bằng OkHttp, lưu file cache, tự giải nén gzip |
-| `MainViewModel.kt` | Trạng thái: kênh, yêu thích, EPG, cache |
-| `BrowseScreen.kt` | Màn hình chính: xem trước + bảng lịch kênh/chương trình |
-| `GuideModel.kt` | Chia EPG thành các ô trên bảng lịch |
-| `Updater.kt`, `UpdateViewModel.kt`, `UpdateDialog.kt` | Kiểm tra, tải và cài bản cập nhật từ GitHub Releases |
-| `PlayerFactory.kt` | Tạo ExoPlayer dùng chung (xem trước + toàn màn hình) |
-| `PlayerScreen.kt` | Trình phát ExoPlayer, thanh thông tin, bảng chọn kênh |
-| `StreamInfo.kt` | Đọc thông số luồng (độ phân giải, fps, codec, bitrate) cho thanh thông tin |
-| `SetupScreen.kt` | Nhập link playlist / EPG, xem phiên bản, kiểm tra cập nhật |
+| File | Việc | So với bản TV |
+|---|---|---|
+| `M3uParser.kt`, `EpgParser.kt`, `Http.kt`, `Models.kt`, `GuideModel.kt` | Đọc playlist / EPG, tải mạng, chia ô lịch | Giữ nguyên |
+| `MainViewModel.kt`, `Prefs.kt` | Kênh, yêu thích, cache, tự làm mới 3h/6h | Giữ nguyên + 2 tùy chọn mới |
+| `Updater.kt`, `UpdateViewModel.kt` | Tự cập nhật từ GitHub Releases | Giữ nguyên |
+| `StreamInfo.kt` | Thông số luồng | Nhãn tự xuống dòng khi màn hình hẹp |
+| `Playback.kt` | **Một trình phát dùng chung** xem trước + toàn màn hình, tự thử lại khi mất luồng | Mới |
+| `PlayerFactory.kt` | Tạo ExoPlayer, dừng khi xuống nền | + dự phòng bộ giải mã, tự dừng khi rút tai nghe |
+| `BrowseScreen.kt` | Màn hình chính, bố cục thích ứng, ngăn/chip nhóm, xem trước, thông tin | Viết lại |
+| `Guide.kt` | Thanh thời gian + bảng lịch cảm ứng, kéo để làm mới, nút "Bây giờ" | Viết lại |
+| `PlayerScreen.kt` | Toàn màn hình: điều khiển, danh sách kênh, độ sáng/âm lượng, kiểu hình | Viết lại |
+| `VideoGestures.kt` | Nhận diện chạm / vuốt / chụm trên video | Mới |
+| `Pip.kt` | Cửa sổ nổi + nút điều khiển trong cửa sổ | Mới |
+| `SetupScreen.kt`, `UpdateDialog.kt` | Cài đặt (có nút Dán), hộp thoại cập nhật | Viết lại cho cảm ứng |
+| `AboutScreen.kt` | Màn hình Giới thiệu; `AppInfo` = tên, email nhà phát triển | Mới |
+| `Components.kt`, `MainActivity.kt` | Màu, icon, nút tròn; tràn viền, đa cửa sổ | Viết lại |
 
-## Hạn chế hiện tại / việc nên làm tiếp
+## Chỉnh nhanh
+- Kích thước bảng lịch (độ rộng cột kênh, chiều cao hàng, độ rộng theo phút): hàm `guideDims()` trong `Guide.kt`.
+- Ngưỡng chuyển sang bố cục ngăn cố định: `840.dp` trong `BrowseScreen.kt`; độ rộng ngăn: `PANE_W`.
+- Chất lượng khung xem trước (mặc định tối đa 720p): `Playback.setFullQuality()`.
+- Tần suất tự làm mới: đầu file `MainViewModel.kt` (như bản TV).
+
+## Hạn chế / việc nên làm tiếp
 - EPG ghép theo `tvg-id`; kênh không có tvg-id sẽ không hiện lịch.
-- Chưa có: nhập số kênh bằng phím số, ghi hình, catch-up, multiview, khóa phụ huynh, Xtream Codes, nhiều playlist.
-- Link kiểu `url|User-Agent=...` (header riêng) chưa được hỗ trợ.
+- Chưa có: nhập số kênh, ghi hình, catch-up, multiview, khóa phụ huynh, Xtream Codes, nhiều playlist, Chromecast,
+  link kiểu `url|User-Agent=...`.
 
 Chỉ dùng với nội dung bạn có quyền xem.
-
-## Đổi tần suất tự cập nhật
-Trong `MainViewModel.kt`, đầu file có 3 hằng số `PLAYLIST_TTL_MS`, `EPG_TTL_MS`, `CHECK_EVERY_MS`.
-
-## Logo
-Icon app: `app/src/main/res/drawable/ic_launcher.xml` (vector). Banner trên màn hình Android TV:
-`app/src/main/res/drawable-xhdpi/tv_banner.png` (640x360). Có thể xóa file cũ `drawable/banner.xml` nếu còn.
-
-## Chỉnh bảng lịch
-Đầu file `BrowseScreen.kt`: `LEFT_W` (cột tên kênh), `ROW_H` (cao mỗi hàng), `DP_PER_MIN` (độ rộng theo phút),
-`GUIDE_HOURS` (số giờ hiển thị). Kênh không có `tvg-id` khớp EPG sẽ hiện "Không có thông tin".
-
-## Cập nhật trong app (không cần tải lại APK bằng tay)
-- Mỗi lần push mã lên nhánh master, GitHub Actions build APK, ký bằng khóa cố định và tạo một **Release** `v<số lượt build>` kèm `MyTivi.apk`.
-- Trong app: bấm ◄ mở ngăn nhóm kênh > **Kiểm tra cập nhật**. Có bản mới thì bấm **Cập nhật ngay**; app tải về và mở trình cài đặt của Android.
-- App tự kiểm tra ngầm mỗi lần mở; có bản mới thì nút cập nhật đổi màu xanh.
-- Lần đầu cập nhật, Android hỏi cho phép MyTivi "cài ứng dụng không rõ nguồn gốc"; bật một lần là xong.
-- Link tải bản mới nhất (dùng cho app Downloader trên box):
-  `https://github.com/<tài-khoản>/<repo>/releases/latest/download/MyTivi.apk`
-- Repo phải để **Public** thì app mới đọc được bản phát hành.
-
-### Khóa ký (bắt buộc, làm một lần)
-Thêm 2 secret ở repo > Settings > Secrets and variables > Actions: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`.
-Không có 2 secret này thì workflow dừng ngay ở bước "Prepare signing key".
-Giữ kỹ file khóa: mất khóa thì không cập nhật đè được nữa, phải gỡ app cài lại.

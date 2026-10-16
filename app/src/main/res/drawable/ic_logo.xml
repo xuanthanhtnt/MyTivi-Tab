@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="64dp"
+    android:viewportWidth="72"
+    android:viewportHeight="64">
+    <!-- Logo MyTivi (hình TV giống icon app) cắt sát, dùng trong ngăn nhóm kênh và Cài đặt -->
+    <group
+        android:translateX="-18"
+        android:translateY="-22">
+        <path
+            android:fillColor="#12203A"
+            android:strokeColor="#38BDF8"
+            android:strokeWidth="4"
+            android:pathData="M30,28 L78,28 A8,8 0 0 1 86,36 L86,64 A8,8 0 0 1 78,72 L30,72 A8,8 0 0 1 22,64 L22,36 A8,8 0 0 1 30,28 Z" />
+        <path android:fillColor="#F8FAFC" android:pathData="M48,40 L48,60 L67,50 Z" />
+        <path android:fillColor="#38BDF8" android:pathData="M51,74h6v5h-6z" />
+        <path
+            android:fillColor="#38BDF8"
+            android:pathData="M40.5,78 L67.5,78 A2.5,2.5 0 0 1 70,80.5 A2.5,2.5 0 0 1 67.5,83 L40.5,83 A2.5,2.5 0 0 1 38,80.5 A2.5,2.5 0 0 1 40.5,78 Z" />
+        <path android:fillColor="#EF4444" android:pathData="M74,38 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" />
+    </group>
+</vector>
