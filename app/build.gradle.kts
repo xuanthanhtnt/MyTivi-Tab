@@ -1,3 +1,7 @@
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -12,8 +16,8 @@ val updateRepo = System.getenv("GITHUB_REPOSITORY") ?: "xuanthanhtnt/MyTivi-Tab"
 // Khóa ký cố định (lấy từ GitHub Secrets). Mọi bản phải ký cùng 1 khóa thì mới cài đè được.
 val keystoreFile = System.getenv("KEYSTORE_FILE")
 // Thông tin bản dựng hiện ở màn hình Giới thiệu
-val buildTime: String = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
-    .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+val buildTime: String = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))
+    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
 val gitSha: String = (System.getenv("GITHUB_SHA") ?: "local").take(7)
 
 android {
