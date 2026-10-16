@@ -104,6 +104,7 @@ fun Guide(
     loading: Boolean,
     onRefresh: () -> Unit,
     emptyText: String,
+    groupLabel: String,
     onTapChannel: (Int, Channel) -> Unit,
     onTapCell: (Int, Channel, Cell) -> Unit,
     onFavorite: (Channel) -> Unit,
@@ -111,7 +112,7 @@ fun Guide(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
-        TimelineHeader(now = now, windowStart = windowStart, scroll = ui.scroll, dims = dims)
+        TimelineHeader(now = now, windowStart = windowStart, scroll = ui.scroll, dims = dims, groupLabel = groupLabel)
         Box(Modifier.fillMaxWidth().height(1.dp).background(Line))
         GuideBody(
             shown = shown,
@@ -231,7 +232,7 @@ private fun NowChip(visible: Boolean, onClick: () -> Unit, modifier: Modifier = 
 }
 
 @Composable
-private fun TimelineHeader(now: Long, windowStart: Long, scroll: ScrollState, dims: GuideDims) {
+private fun TimelineHeader(now: Long, windowStart: Long, scroll: ScrollState, dims: GuideDims, groupLabel: String) {
     val density = LocalDensity.current
     val dateText = remember(now / 60_000) {
         SimpleDateFormat("EEE dd/MM  HH:mm", Locale.getDefault()).format(Date(now))
@@ -241,13 +242,22 @@ private fun TimelineHeader(now: Long, windowStart: Long, scroll: ScrollState, di
     val halfArrowPx = with(density) { (arrowW / 2).toPx() }
 
     Row(Modifier.fillMaxWidth().height(36.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            dateText,
-            color = Dim,
-            fontSize = 14.sp,
-            maxLines = 1,
-            modifier = Modifier.width(dims.leftW).padding(start = 16.dp),
-        )
+        // Nhóm đang xem (ngăn nhóm kênh tự ẩn nên hiện tên nhóm ở đây) + ngày giờ
+        Row(
+            Modifier.width(dims.leftW).padding(start = 16.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                groupLabel,
+                color = Accent,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            Text("  ·  $dateText", color = Dim, fontSize = 14.sp, maxLines = 1, softWrap = false)
+        }
         Box(Modifier.weight(1f).fillMaxHeight().clipToBounds()) {
             // Kéo thanh giờ cũng trượt cả bảng (dùng chung ScrollState)
             Row(Modifier.fillMaxSize().horizontalScroll(scroll)) {

@@ -10,6 +10,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -62,6 +65,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -69,10 +73,15 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -88,9 +97,7 @@ import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-/** Bề rộng ngăn nhóm kênh cố định (tablet nằm ngang, màn hình rộng). */
-private val PANE_W = 280.dp
+import kotlin.math.abs
 
 /**
  * Trạng thái màn hình chính, giữ ở cấp App để vào/ra toàn màn hình (hoặc xoay máy)
@@ -222,10 +229,21 @@ fun BrowseScreen(
     }
 
     val drawer = rememberDrawerState(DrawerValue.Closed)
-    BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
-    BackHandler(enabled = ui.searchOpen && !drawer.isOpen) {
-        ui.searchOpen = false
-        setQuery("")
+    val activity = LocalContext.current.findActivity()
+    // Nút / cử chỉ "Quay lại" ở màn hình chính:
+    //  - đang mở ngăn nhóm → đóng; đang tìm kiếm → đóng ô tìm;
+    //  - còn lại → MỞ ngăn nhóm kênh. Trên máy điều hướng bằng cử chỉ, vuốt từ mép trái chính là cử chỉ
+    //    "Quay lại" của Android, nên vuốt ở bất kỳ đâu dọc mép trái đều mở nhóm kênh thay vì thoát app.
+    //  Thoát app: nút "Thoát" ở cuối ngăn nhóm, hoặc Home.
+    BackHandler {
+        when {
+            drawer.isOpen -> scope.launch { drawer.close() }
+            ui.searchOpen -> {
+                ui.searchOpen = false
+                setQuery("")
+            }
+            else -> scope.launch { drawer.open() }
+        }
     }
 
     val updated = if (vm.lastUpdated > 0) " · cập nhật ${hhmm(vm.lastUpdated)}" else ""
@@ -290,6 +308,7 @@ fun BrowseScreen(
             loading = vm.loading,
             onRefresh = { vm.refresh() },
             emptyText = emptyText,
+            groupLabel = groupLabel,
             onTapChannel = { i, ch -> tapChannel(i, ch) },
             onTapCell = { i, ch, cell -> tapCell(i, ch, cell) },
             onFavorite = { vm.toggleFavorite(it) },
@@ -300,16 +319,16 @@ fun BrowseScreen(
             modifier = m,
         )
     }
-    val pane: @Composable (Boolean, Modifier) -> Unit = { inDrawer, m ->
+    val pane: @Composable (Boolean) -> Unit = { withSearch ->
         GroupPane(
             labels = labels,
             counts = counts,
             selected = sel,
             onSelect = {
                 selectGroup(it)
-                if (inDrawer) scope.launch { drawer.close() }
+                scope.launch { drawer.close() }      // chọn nhóm xong ngăn tự ẩn
             },
-            showSearch = !inDrawer,
+            showSearch = withSearch,
             query = query,
             onQuery = { setQuery(it) },
             searchHint = searchHint,
@@ -323,58 +342,54 @@ fun BrowseScreen(
             onSettings = onSettings,
             onUpdate = { updates.onButton() },
             onAbout = onAbout,
-            modifier = m,
+            onExit = { activity?.finish() },
+            modifier = Modifier.fillMaxSize(),
         )
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Bg)) {
         val wide = maxWidth >= 840.dp && maxHeight >= 480.dp
         val landscape = maxWidth > maxHeight
-        if (wide) {
-            Row(Modifier.fillMaxSize().safeDrawingPadding()) {
-                pane(false, Modifier.width(PANE_W).fillMaxHeight())
-                Box(Modifier.width(1.dp).fillMaxHeight().background(Line))
-                MainArea(
-                    landscape = true,
-                    showChips = false,
-                    preview = preview,
-                    info = info,
-                    chips = chips,
-                    guide = guide,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                )
-            }
-        } else {
-            ModalNavigationDrawer(
-                drawerState = drawer,
-                gesturesEnabled = drawer.isOpen,      // chỉ vuốt để đóng; mở bằng nút ☰ (tránh đụng thao tác kéo bảng lịch)
-                drawerContent = {
-                    ModalDrawerSheet(drawerContainerColor = Panel, modifier = Modifier.width(300.dp)) {
-                        pane(true, Modifier.fillMaxSize())
-                    }
-                },
+        // Ngăn nhóm kênh luôn ẩn; vuốt từ mép trái (hoặc chạm tay nắm ‹ ở giữa mép trái, nút ☰) để hiện
+        ModalNavigationDrawer(
+            drawerState = drawer,
+            gesturesEnabled = drawer.isOpen,      // đang mở: vuốt sang trái hoặc chạm ra ngoài để ẩn
+            drawerContent = {
+                ModalDrawerSheet(drawerContainerColor = Panel, modifier = Modifier.width(300.dp)) {
+                    // Màn rộng không có thanh trên cùng nên ô tìm kiếm nằm trong ngăn nhóm
+                    pane(wide)
+                }
+            },
+        ) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Bg)
+                    .leftEdgeSwipe(onSwipe = { scope.launch { drawer.open() } }),
             ) {
-                Column(Modifier.fillMaxSize().background(Bg).safeDrawingPadding()) {
-                    TopBar(
-                        title = groupLabel,
-                        query = query,
-                        onQuery = { setQuery(it) },
-                        searchHint = searchHint,
-                        searchOpen = ui.searchOpen,
-                        onSearchOpen = { open ->
-                            ui.searchOpen = open
-                            if (!open) setQuery("")
-                        },
-                        loading = vm.loading,
-                        updateAvailable = updates.updateAvailable,
-                        onMenu = { scope.launch { drawer.open() } },
-                        onRefresh = { vm.refresh() },
-                        onSettings = onSettings,
-                        onUpdate = { updates.onButton() },
-                    )
+                Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+                    if (!wide) {
+                        TopBar(
+                            title = groupLabel,
+                            query = query,
+                            onQuery = { setQuery(it) },
+                            searchHint = searchHint,
+                            searchOpen = ui.searchOpen,
+                            onSearchOpen = { open ->
+                                ui.searchOpen = open
+                                if (!open) setQuery("")
+                            },
+                            loading = vm.loading,
+                            updateAvailable = updates.updateAvailable,
+                            onMenu = { scope.launch { drawer.open() } },
+                            onRefresh = { vm.refresh() },
+                            onSettings = onSettings,
+                            onUpdate = { updates.onButton() },
+                        )
+                    }
                     MainArea(
-                        landscape = landscape,
-                        showChips = !landscape,
+                        landscape = wide || landscape,
+                        showChips = !wide && !landscape,
                         preview = preview,
                         info = info,
                         chips = chips,
@@ -382,8 +397,78 @@ fun BrowseScreen(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     )
                 }
+                EdgeHandle(
+                    onClick = { scope.launch { drawer.open() } },
+                    modifier = Modifier.align(Alignment.CenterStart),
+                )
             }
         }
+    }
+}
+
+/**
+ * Vuốt từ mép trái sang phải (bắt đầu trong ~28dp sát mép) → onSwipe.
+ * Nghe ở lượt Initial (trước các phần tử con) nhưng chỉ "giữ" cử chỉ khi đã chắc là vuốt ngang sang phải,
+ * nên chạm / giữ lâu / cuộn danh sách kênh ở sát mép vẫn hoạt động bình thường.
+ * Đoạn 200dp giữa mép trái được loại khỏi cử chỉ "Quay lại" của Android (giới hạn tối đa Android cho phép);
+ * vuốt ở chỗ khác dọc mép trái thì Android báo "Quay lại" và BackHandler ở trên cũng mở ngăn nhóm.
+ */
+@Composable
+private fun Modifier.leftEdgeSwipe(onSwipe: () -> Unit): Modifier {
+    val swipe by rememberUpdatedState(onSwipe)
+    val density = LocalDensity.current
+    val edgePx = with(density) { 28.dp.toPx() }
+    val exclusionH = with(density) { 200.dp.toPx() }
+    val exclusionW = with(density) { 32.dp.toPx() }
+    return this
+        .systemGestureExclusion { c ->
+            val h = c.size.height.toFloat()
+            val top = ((h - exclusionH) / 2f).coerceAtLeast(0f)
+            Rect(0f, top, exclusionW, (top + exclusionH).coerceAtMost(h))
+        }
+        .pointerInput(Unit) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                if (down.position.x > edgePx) return@awaitEachGesture
+                val slop = viewConfiguration.touchSlop
+                var dx = 0f
+                var dy = 0f
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val c = event.changes.firstOrNull { it.id == down.id } ?: break
+                    if (!c.pressed) break
+                    val d = c.position - c.previousPosition
+                    dx += d.x
+                    dy += d.y
+                    if (dx > slop && dx > abs(dy) * 1.5f) {
+                        event.changes.forEach { it.consume() }
+                        swipe()
+                        // Giữ nốt phần còn lại của cử chỉ để bảng kênh bên dưới không bị kéo theo
+                        do {
+                            val rest = awaitPointerEvent(PointerEventPass.Initial)
+                            rest.changes.forEach { it.consume() }
+                        } while (rest.changes.any { it.pressed })
+                        break
+                    }
+                    if (abs(dy) > slop) break       // vuốt dọc: để danh sách kênh cuộn
+                }
+            }
+        }
+}
+
+/** Tay nắm nhỏ ở giữa mép trái: gợi ý "vuốt từ đây để mở nhóm kênh"; chạm vào cũng mở. */
+@Composable
+private fun EdgeHandle(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .width(18.dp)
+            .height(80.dp)
+            .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
+            .background(Color(0x33FFFFFF))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        AppIcon(R.drawable.ic_chevron_right, "Mở nhóm kênh", Modifier.size(18.dp), tint = Color.White)
     }
 }
 
@@ -706,7 +791,8 @@ private fun InfoFull(
             Spacer(Modifier.height(8.dp))
             Text(
                 "Chạm lần nữa vào kênh đang xem (hoặc vào khung hình) để xem toàn màn hình. " +
-                    "Kéo ngang bảng lịch để xem chương trình sắp tới; giữ lâu tên kênh để thêm vào Yêu thích.",
+                    "Vuốt từ mép trái màn hình để mở nhóm kênh. Kéo ngang bảng lịch để xem chương trình sắp tới; " +
+                    "giữ lâu tên kênh để thêm vào Yêu thích.",
                 color = Dim,
                 fontSize = 14.sp,
             )
@@ -916,6 +1002,7 @@ private fun GroupPane(
     onSettings: () -> Unit,
     onUpdate: () -> Unit,
     onAbout: () -> Unit,
+    onExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state = rememberLazyListState(initialFirstVisibleItemIndex = (selected - 3).coerceAtLeast(0))
@@ -927,7 +1014,10 @@ private fun GroupPane(
                 modifier = Modifier.size(36.dp),
             )
             Spacer(Modifier.width(10.dp))
-            Text("MyTivi", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Column {
+                Text("MyTivi", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("Chọn nhóm, hoặc vuốt sang trái để ẩn", color = Dim, fontSize = 12.sp)
+            }
         }
         if (showSearch) {
             SearchField(query, onQuery, searchHint, Modifier.fillMaxWidth())
@@ -972,6 +1062,7 @@ private fun GroupPane(
         PaneAction(R.drawable.ic_settings, "Cài đặt", onSettings)
         PaneAction(R.drawable.ic_update, updateLabel, onUpdate, highlight = updateHighlight)
         PaneAction(R.drawable.ic_info, "Giới thiệu", onAbout)
+        PaneAction(R.drawable.ic_exit, "Thoát ứng dụng", onExit)
         Text(status, color = Dim, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(start = 14.dp, top = 6.dp))
         Text("Phiên bản $version", color = Dim, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(start = 14.dp))
         if (error != null) {
