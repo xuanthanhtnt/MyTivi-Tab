@@ -134,7 +134,7 @@ Build bằng Android Studio (Koala 2024.1+): mở thư mục, đợi Gradle sync
 
 ## Hạn chế / việc nên làm tiếp
 - EPG ghép theo `tvg-id`; kênh không có tvg-id sẽ không hiện lịch.
-- Chưa có: nhập số kênh, ghi hình, catch-up, multiview, khóa phụ huynh, Xtream Codes, nhiều playlist, Chromecast,
+- Chưa có: nhập số kênh, ghi hình, catch-up, multiview, khóa phụ huynh, Xtream Codes, Chromecast,
   link kiểu `url|User-Agent=...`.
 
 Chỉ dùng với nội dung bạn có quyền xem.
