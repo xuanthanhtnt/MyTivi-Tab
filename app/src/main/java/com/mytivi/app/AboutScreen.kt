@@ -92,6 +92,7 @@ fun AboutScreen(
     version: String,
     updateAvailable: Boolean,
     channelCount: Int,
+    playlistCount: Int,
     lastUpdated: Long,
     onCheckUpdate: () -> Unit,
     onBack: () -> Unit,
@@ -111,11 +112,12 @@ fun AboutScreen(
 
     val mailSubject = "[${AppInfo.APP_NAME} $version] Góp ý / báo lỗi"
     val mailUrl = "mailto:${AppInfo.EMAIL}?subject=${Uri.encode(mailSubject)}"
+    val sourcesText = if (playlistCount > 1) " từ $playlistCount danh sách" else ""
     val playlistLine = if (lastUpdated > 0) {
-        "$channelCount kênh · cập nhật " +
+        "$channelCount kênh$sourcesText · cập nhật " +
             SimpleDateFormat("HH:mm dd/MM", Locale.getDefault()).format(Date(lastUpdated))
     } else {
-        "$channelCount kênh"
+        "$channelCount kênh$sourcesText"
     }
     val year = Calendar.getInstance().get(Calendar.YEAR)
     val years = if (year > AppInfo.COPYRIGHT_FROM) "${AppInfo.COPYRIGHT_FROM}–$year" else "${AppInfo.COPYRIGHT_FROM}"

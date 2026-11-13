@@ -69,7 +69,7 @@ fun App(vm: MainViewModel = viewModel(), updates: UpdateViewModel = viewModel())
     // Nhóm đang chọn, ô tìm kiếm, vị trí cuộn bảng lịch: giữ nguyên khi vào/ra toàn màn hình
     val browse = remember { BrowseUiState() }
     var session by remember { mutableStateOf<PlaySession?>(null) }
-    var setup by remember { mutableStateOf(vm.playlistUrl.isBlank()) }
+    var setup by remember { mutableStateOf(!vm.hasPlaylists) }
     var about by remember { mutableStateOf(false) }
     var autoStarted by remember { mutableStateOf(false) }
 
@@ -101,21 +101,27 @@ fun App(vm: MainViewModel = viewModel(), updates: UpdateViewModel = viewModel())
             version = updates.currentVersion,
             updateAvailable = updates.updateAvailable,
             channelCount = vm.channels.size,
+            playlistCount = vm.playlists.count { it.enabled },
             lastUpdated = vm.lastUpdated,
             onCheckUpdate = { updates.onButton() },
             onBack = { about = false },
         )
         setup -> SetupScreen(
-            initialUrl = vm.playlistUrl,
-            initialEpg = vm.epgUrl,
+            initialPlaylists = vm.playlists,
+            initialEpgs = vm.epgSources,
+            initialUseAutoEpg = vm.useAutoEpg,
             initialAutoFullscreen = vm.autoFullscreen,
-            canCancel = vm.playlistUrl.isNotBlank(),
+            canCancel = vm.hasPlaylists,
             version = updates.currentVersion,
-            onSave = { url, epgUrl, autoFull ->
+            onSave = { newPlaylists, newEpgs, autoEpg, autoFull ->
                 vm.autoFullscreen = autoFull
-                if (url != vm.playlistUrl || epgUrl != vm.epgUrl) {
-                    playback.stop()
-                    vm.savePlaylist(url, epgUrl)
+                if (newPlaylists != vm.playlists || newEpgs != vm.epgSources || autoEpg != vm.useAutoEpg) {
+                    // Kênh đang phát thuộc danh sách vừa bị tắt / xóa / đổi link thì dừng phát
+                    val srcId = playback.channel?.src
+                    val before = vm.playlists.firstOrNull { it.id == srcId }
+                    val after = newPlaylists.firstOrNull { it.id == srcId }
+                    if (after == null || !after.enabled || after.url != before?.url) playback.stop()
+                    vm.saveSources(newPlaylists, newEpgs, autoEpg)
                 }
                 setup = false
             },

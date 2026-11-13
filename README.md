@@ -55,6 +55,16 @@ Phần lõi (đọc playlist M3U, EPG XMLTV, cache, tự làm mới, tự cập 
 - Thanh thông tin: số kênh, logo, chương trình đang phát + tiến độ, chương trình tiếp theo, đồng hồ, thông số luồng
   (SD/HD/FHD/4K, độ phân giải, fps, codec, âm thanh, bitrate) – giống bản TV.
 
+## Nhiều danh sách kênh (M3U) và nhiều EPG
+Cài đặt (⚙ Tùy chọn > Cài đặt) có 2 mục:
+- **Danh sách kênh (M3U)**: thêm bao nhiêu danh sách cũng được (link .m3u hoặc một luồng .m3u8), mỗi danh sách có tên,
+  công tắc bật/tắt, nút sửa, xóa, đưa lên trên. Kênh của các danh sách **đang bật** được gộp lại; khi có từ 2 danh sách
+  trở lên, ngăn nhóm kênh chia mục theo tên danh sách (mỗi mục có "Tất cả kênh" của danh sách đó và các nhóm của nó).
+- **Lịch phát sóng (EPG)**: thêm nhiều link XMLTV (.xml / .xml.gz). Lịch được ghép theo `tvg-id`; nhiều EPG cùng có một kênh
+  thì **link ở trên được ưu tiên**. Công tắc *Tự dùng EPG ghi sẵn trong playlist* dùng thêm link `url-tvg` của các playlist.
+- Thay đổi chỉ áp dụng khi bấm **Lưu**. Mỗi nguồn được lưu tạm riêng: một nguồn tải lỗi thì vẫn dùng bản đã lưu của nguồn đó.
+- Cập nhật từ bản cũ (1 link): link cũ tự chuyển thành "Danh sách 1" / "EPG 1", không phải nhập lại.
+
 ## Giới thiệu & thông tin nhà phát triển
 Mở từ ngăn nhóm kênh > ⚙ Tùy chọn > **Giới thiệu**, hoặc Cài đặt > **Giới thiệu**. Gồm: phiên bản, số bản dựng, ngày dựng + mã commit,
 nhà phát triển, email liên hệ (mở ứng dụng thư với tiêu đề có sẵn số phiên bản), trang mã nguồn, trang báo lỗi,
@@ -102,7 +112,7 @@ Build bằng Android Studio (Koala 2024.1+): mở thư mục, đợi Gradle sync
 | File | Việc | So với bản TV |
 |---|---|---|
 | `M3uParser.kt`, `EpgParser.kt`, `Http.kt`, `Models.kt`, `GuideModel.kt` | Đọc playlist / EPG, tải mạng, chia ô lịch | Giữ nguyên |
-| `MainViewModel.kt`, `Prefs.kt` | Kênh, yêu thích, cache, tự làm mới 3h/6h | Giữ nguyên + 2 tùy chọn mới |
+| `MainViewModel.kt`, `Prefs.kt` | Nhiều danh sách kênh + nhiều EPG, yêu thích, cache theo nguồn, tự làm mới 3h/6h | Viết lại phần nguồn |
 | `Updater.kt`, `UpdateViewModel.kt` | Tự cập nhật từ GitHub Releases | Giữ nguyên |
 | `StreamInfo.kt` | Thông số luồng | Nhãn tự xuống dòng khi màn hình hẹp |
 | `Playback.kt` | **Một trình phát dùng chung** xem trước + toàn màn hình, tự thử lại khi mất luồng | Mới |

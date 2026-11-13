@@ -185,7 +185,8 @@ private fun GuideBody(
     ) {
         LazyColumn(state = ui.listState, modifier = Modifier.fillMaxSize()) {
             // Khóa ổn định theo kênh: làm mới danh sách không làm hàng cũ bị vẽ lặp
-            itemsIndexed(shown, key = { _, ch -> ch.group + "\u0000" + ch.url }) { i, ch ->
+            // (gồm cả mã danh sách: cùng một kênh có thể nằm trong 2 danh sách khác nhau)
+            itemsIndexed(shown, key = { _, ch -> ch.src + "\u0000" + ch.group + "\u0000" + ch.url }) { i, ch ->
                 val isSel = ch.url == selectedUrl
                 GuideRow(
                     number = i + 1,

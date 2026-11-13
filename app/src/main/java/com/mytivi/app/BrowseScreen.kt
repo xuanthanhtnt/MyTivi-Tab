@@ -105,7 +105,7 @@ private const val DRAWER_AUTO_HIDE_MS = 10_000L
 
 @Stable
 class BrowseUiState {
-    var sel by mutableIntStateOf(1)            // 0 = Yêu thích, 1 = Tất cả, 2.. = nhóm
+    var selKey by mutableStateOf("all")        // mã dòng nhóm đang chọn (xem GroupEntry.key)
     var query by mutableStateOf("")
     var searchOpen by mutableStateOf(false)
     /** Ô chương trình vừa chạm: (link kênh, chương trình) – để xem thông tin chương trình sắp chiếu. */
@@ -138,23 +138,17 @@ fun BrowseScreen(
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
 
-    val sel = ui.sel
     val query = ui.query
-    val groups = remember(channels) { channels.map { it.group }.distinct() }
-    val labels = remember(groups) { listOf("★ Yêu thích", "Tất cả") + groups }
-    val counts = remember(channels, favorites, groups) {
-        val byGroup = channels.groupingBy { it.group }.eachCount()
-        listOf(channels.count { it.url in favorites }, channels.size) + groups.map { byGroup[it] ?: 0 }
-    }
-    val shown = remember(channels, favorites, groups, sel, query) {
-        val base = when (sel) {
-            0 -> channels.filter { it.url in favorites }
-            1 -> channels
-            else -> groups.getOrNull(sel - 2)?.let { g -> channels.filter { it.group == g } } ?: channels
-        }
+    // Dòng nhóm: Yêu thích, Tất cả, rồi nhóm của từng danh sách kênh (chia mục khi có ≥ 2 danh sách)
+    val entries = remember(channels, favorites, vm.playlists) { buildGroupEntries(channels, favorites, vm.playlists) }
+    // Nhóm đang chọn không còn (đổi/xóa danh sách) thì về "Tất cả"
+    val selEntry = entries.firstOrNull { it.key == ui.selKey && !it.header } ?: entries[1]
+    val selKey = selEntry.key
+    val shown = remember(channels, favorites, selEntry, query) {
+        val base = channelsFor(selEntry, channels, favorites)
         if (query.isBlank()) base else base.filter { it.name.contains(query, ignoreCase = true) }
     }
-    val groupLabel = labels.getOrElse(sel) { "Tất cả" }
+    val groupLabel = selEntry.title
 
     // ---- Cửa sổ thời gian của bảng lịch: mốc đầu tự dời theo mỗi nửa giờ ----
     val windowStart = remember(now / HALF_HOUR) { floorTo(now, HALF_HOUR) }
@@ -206,8 +200,8 @@ fun BrowseScreen(
         }
     }
 
-    fun selectGroup(i: Int) {
-        ui.sel = i
+    fun selectGroup(key: String) {
+        ui.selKey = key
         scope.launch { ui.listState.scrollToItem(0) }
     }
 
@@ -263,10 +257,10 @@ fun BrowseScreen(
         is UpdateState.Downloading -> "Đang tải bản cập nhật…"
         else -> "Kiểm tra cập nhật"
     }
-    val searchHint = if (sel == 1) "Tìm kênh…" else "Tìm trong “$groupLabel”…"
+    val searchHint = if (selKey == "all") "Tìm kênh…" else "Tìm trong “$groupLabel”…"
     val emptyText = when {
         query.isNotBlank() -> "Không tìm thấy kênh nào khớp “$query” trong nhóm này."
-        sel == 0 -> "Chưa có kênh yêu thích. Chạm ☆ cạnh tên kênh (hoặc giữ lâu tên kênh) để thêm."
+        selKey == "fav" -> "Chưa có kênh yêu thích. Chạm ☆ cạnh tên kênh (hoặc giữ lâu tên kênh) để thêm."
         vm.loading -> "Đang tải danh sách kênh…"
         else -> "Không có kênh nào."
     }
@@ -300,7 +294,7 @@ fun BrowseScreen(
         )
     }
     val chips: @Composable () -> Unit = {
-        GroupChips(labels = labels, counts = counts, selected = sel, onSelect = { selectGroup(it) })
+        GroupChips(entries = entries, selectedKey = selKey, onSelect = { selectGroup(it) })
     }
     val guide: @Composable (Modifier, GuideDims) -> Unit = { m, dims ->
         Guide(
@@ -331,9 +325,8 @@ fun BrowseScreen(
     }
     val pane: @Composable (Boolean) -> Unit = { withSearch ->
         GroupPane(
-            labels = labels,
-            counts = counts,
-            selected = sel,
+            entries = entries,
+            selectedKey = selKey,
             onSelect = {
                 selectGroup(it)
                 groupsOpen = false                    // chọn nhóm xong ngăn tự ẩn
@@ -956,7 +949,9 @@ private fun SearchField(
 
 /** Hàng chip nhóm kênh, cuộn ngang (tablet dựng dọc). */
 @Composable
-private fun GroupChips(labels: List<String>, counts: List<Int>, selected: Int, onSelect: (Int) -> Unit) {
+private fun GroupChips(entries: List<GroupEntry>, selectedKey: String, onSelect: (String) -> Unit) {
+    val chips = remember(entries) { entries.filter { !it.header } }
+    val selected = chips.indexOfFirst { it.key == selectedKey }
     val state = rememberLazyListState(initialFirstVisibleItemIndex = (selected - 1).coerceAtLeast(0))
     LazyRow(
         state = state,
@@ -964,11 +959,11 @@ private fun GroupChips(labels: List<String>, counts: List<Int>, selected: Int, o
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
     ) {
-        itemsIndexed(labels) { i, label ->
+        itemsIndexed(chips, key = { _, e -> e.key }) { _, e ->
             FilterChip(
-                selected = i == selected,
-                onClick = { onSelect(i) },
-                label = { Text("$label · ${counts.getOrElse(i) { 0 }}", maxLines = 1) },
+                selected = e.key == selectedKey,
+                onClick = { onSelect(e.key) },
+                label = { Text("${e.title} · ${e.count}", maxLines = 1) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = SelBg,
                     selectedLabelColor = Accent,
@@ -985,10 +980,9 @@ private fun GroupChips(labels: List<String>, counts: List<Int>, selected: Int, o
  */
 @Composable
 private fun GroupPane(
-    labels: List<String>,
-    counts: List<Int>,
-    selected: Int,
-    onSelect: (Int) -> Unit,
+    entries: List<GroupEntry>,
+    selectedKey: String,
+    onSelect: (String) -> Unit,
     showSearch: Boolean,
     query: String,
     onQuery: (String) -> Unit,
@@ -1024,9 +1018,8 @@ private fun GroupPane(
                 )
             } else {
                 GroupList(
-                    labels = labels,
-                    counts = counts,
-                    selected = selected,
+                    entries = entries,
+                    selectedKey = selectedKey,
                     onSelect = onSelect,
                     showSearch = showSearch,
                     query = query,
@@ -1042,10 +1035,9 @@ private fun GroupPane(
 
 @Composable
 private fun GroupList(
-    labels: List<String>,
-    counts: List<Int>,
-    selected: Int,
-    onSelect: (Int) -> Unit,
+    entries: List<GroupEntry>,
+    selectedKey: String,
+    onSelect: (String) -> Unit,
     showSearch: Boolean,
     query: String,
     onQuery: (String) -> Unit,
@@ -1053,6 +1045,7 @@ private fun GroupList(
     updateHighlight: Boolean,
     onOptions: () -> Unit,
 ) {
+    val selected = entries.indexOfFirst { it.key == selectedKey }
     val state = rememberLazyListState(initialFirstVisibleItemIndex = (selected - 3).coerceAtLeast(0))
     Column(Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(start = 8.dp, bottom = 8.dp)) {
@@ -1082,27 +1075,47 @@ private fun GroupList(
             modifier = Modifier.padding(start = 14.dp, bottom = 4.dp),
         )
         LazyColumn(state = state, modifier = Modifier.weight(1f).fillMaxWidth()) {
-            itemsIndexed(labels) { i, label ->
-                val isSel = i == selected
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(if (isSel) SelBg else Color.Transparent)
-                        .clickable { onSelect(i) }
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        label,
-                        color = if (isSel) Accent else Color.White,
-                        fontWeight = if (isSel) FontWeight.SemiBold else FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text("${counts.getOrElse(i) { 0 }}", color = Dim, fontSize = 13.sp)
+            itemsIndexed(entries, key = { _, e -> e.key }) { _, e ->
+                if (e.header) {
+                    // Tiêu đề mục: tên danh sách kênh (chỉ có khi dùng từ 2 danh sách trở lên)
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            e.label.uppercase(),
+                            color = Accent,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 1.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text("${e.count} kênh", color = Dim, fontSize = 12.sp)
+                    }
+                } else {
+                    val isSel = e.key == selectedKey
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(if (isSel) SelBg else Color.Transparent)
+                            .clickable { onSelect(e.key) }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            e.label,
+                            color = if (isSel) Accent else Color.White,
+                            fontWeight = if (isSel) FontWeight.SemiBold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text("${e.count}", color = Dim, fontSize = 13.sp)
+                    }
                 }
             }
         }
